@@ -1,0 +1,47 @@
+# ── RDS Subnet Group ─────────────────────────────────────
+# RDS도 public subnet에 배치하되 SG로 VPC 내부만 허용
+
+resource "aws_db_subnet_group" "main" {
+  name       = "${var.project}-db-subnet-group"
+  subnet_ids = var.public_subnets
+
+  tags = { Name = "${var.project}-db-subnet-group" }
+}
+
+# ── RDS PostgreSQL ────────────────────────────────────────
+
+resource "aws_db_instance" "main" {
+  identifier = "${var.project}-postgres"
+
+  engine         = "postgres"
+  engine_version = "16.3"
+  instance_class = var.db_instance # 수직확장 시 이 값만 변경
+
+  db_name  = var.db_name
+  username = var.db_username
+  password = var.db_password
+
+  allocated_storage     = 20  # 초기 20GB
+  max_allocated_storage = 100 # 자동 스토리지 확장 (최대 100GB)
+  storage_type          = "gp3"
+  storage_encrypted     = true
+
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [var.rds_sg_id]
+  publicly_accessible    = false # VPC 내부에서만 접근
+
+  backup_retention_period = 7   # 7일 자동 백업
+  backup_window           = "03:00-04:00" # 새벽 3시 (트래픽 적은 시간)
+  maintenance_window      = "sun:04:00-sun:05:00"
+
+  skip_final_snapshot       = false
+  final_snapshot_identifier = "${var.project}-postgres-final-snapshot"
+
+  deletion_protection = true # 실수로 삭제 방지
+
+  # 성능 인사이트 (무료 7일 보존)
+  performance_insights_enabled          = true
+  performance_insights_retention_period = 7
+
+  tags = { Name = "${var.project}-postgres" }
+}

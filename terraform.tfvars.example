@@ -1,0 +1,17 @@
+# 이 파일을 복사해서 terraform.tfvars로 사용하세요
+# terraform.tfvars는 .gitignore에 반드시 추가!
+
+project    = "topjug"
+aws_region = "ap-northeast-2"
+
+vpc_cidr = "10.0.0.0/16"
+az_list  = ["ap-northeast-2a", "ap-northeast-2c"]
+
+db_name        = "topjug"
+db_username    = "topjug_admin"
+db_password    = "CHANGE_ME_STRONG_PASSWORD"  # 반드시 변경
+db_instance_class = "db.t4g.micro"
+
+api_cpu           = 256
+api_memory        = 512
+api_desired_count = 1
