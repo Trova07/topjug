@@ -69,3 +69,9 @@ variable "api_desired_count" {
   type        = number
   default     = 1
 }
+
+variable "ec2_instance_type" {
+  description = "ECS EC2 인스턴스 타입 (API 512MB + Redis 256MB 기준 t3.small 적정)"
+  type        = string
+  default     = "t3.small"
+}

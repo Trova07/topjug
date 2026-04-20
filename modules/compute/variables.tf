@@ -55,3 +55,8 @@ variable "api_memory" {
 variable "api_desired_count" {
   type = number
 }
+
+variable "ec2_instance_type" {
+  type    = string
+  default = "t3.small"
+}

@@ -98,6 +98,7 @@ module "compute" {
   api_cpu              = var.api_cpu
   api_memory           = var.api_memory
   api_desired_count    = var.api_desired_count
+  ec2_instance_type    = var.ec2_instance_type
 }
 
 module "storage" {
