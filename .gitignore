@@ -6,3 +6,5 @@ terraform.tfvars       # DB 비밀번호 등 민감정보
 *.tfvars
 !*.tfvars.example      # example 파일은 커밋 허용
 crash.log
+.terraform.tfstate.lock.info
+*.pkg                  # AWS CLI 등 설치 파일

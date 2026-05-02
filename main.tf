@@ -63,25 +63,27 @@ module "ecr" {
 module "loadbalancer" {
   source = "./modules/loadbalancer"
 
-  project             = var.project
-  vpc_id              = module.networking.vpc_id
-  public_subnets      = module.networking.public_subnet_ids
-  alb_sg_id           = module.networking.alb_sg_id
-  acm_certificate_arn = module.dns.acm_certificate_arn
+  project        = var.project
+  vpc_id         = module.networking.vpc_id
+  public_subnets = module.networking.public_subnet_ids
+  alb_sg_id      = module.networking.alb_sg_id
+  # 도메인 준비 완료 후: acm_certificate_arn = module.dns.acm_certificate_arn
 }
 
-# ── DNS / ACM ─────────────────────────────────────────────
-# loadbalancer 모듈보다 나중에 선언해야 ALB outputs 참조 가능
-# (Terraform은 선언 순서와 무관하게 의존성 그래프로 처리)
-
-module "dns" {
-  source = "./modules/dns"
-
-  project      = var.project
-  domain_name  = var.domain_name
-  alb_dns_name = module.loadbalancer.alb_dns_name
-  alb_zone_id  = module.loadbalancer.alb_zone_id
-}
+# ── DNS / ACM (도메인 준비 후 주석 해제) ──────────────────
+# 1. terraform.tfvars 에 domain_name 추가
+# 2. 아래 블록 주석 해제 후 terraform apply
+# 3. 출력된 route53_nameservers 를 도메인 등록업체에 등록
+# 4. 인증서 검증 완료 후 loadbalancer 블록에 acm_certificate_arn 추가
+#
+# module "dns" {
+#   source = "./modules/dns"
+#
+#   project      = var.project
+#   domain_name  = var.domain_name
+#   alb_dns_name = module.loadbalancer.alb_dns_name
+#   alb_zone_id  = module.loadbalancer.alb_zone_id
+# }
 
 module "database" {
   source = "./modules/database"
@@ -133,4 +135,32 @@ module "cdn" {
   s3_bucket_id     = module.storage.bucket_id
   s3_bucket_domain = module.storage.bucket_regional_domain
   alb_dns_name     = module.loadbalancer.alb_dns_name
+
+  depends_on = [module.storage]
+}
+
+# ── S3 버킷 정책 (CloudFront OAC만 허용) ─────────────────
+# cdn 모듈은 us-east-1 provider라 ap-northeast-2 버킷에 정책을 걸면
+# 307 에러 발생 → default provider(ap-northeast-2)로 여기서 직접 적용
+
+resource "aws_s3_bucket_policy" "frontend" {
+  bucket = module.storage.bucket_id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "AllowCloudFrontOAC"
+      Effect = "Allow"
+      Principal = { Service = "cloudfront.amazonaws.com" }
+      Action   = "s3:GetObject"
+      Resource = "arn:aws:s3:::${module.storage.bucket_id}/*"
+      Condition = {
+        StringEquals = {
+          "AWS:SourceArn" = module.cdn.cloudfront_distribution_arn
+        }
+      }
+    }]
+  })
+
+  depends_on = [module.storage, module.cdn]
 }

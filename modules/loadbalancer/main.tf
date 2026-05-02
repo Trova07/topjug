@@ -31,27 +31,35 @@ resource "aws_lb_target_group" "api" {
   tags = { Name = "${var.project}-api-tg" }
 }
 
-# ── Listener: HTTP → HTTPS 리다이렉트 ─────────────────────
+# ── Listener: HTTP ───────────────────────────────────────
+# 인증서 없음 → 직접 forward  /  인증서 있음 → HTTPS 리다이렉트
 
-resource "aws_lb_listener" "http_redirect" {
+resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
-    type = "redirect"
+    # acm_certificate_arn 이 세팅되면 HTTPS redirect, 없으면 바로 forward
+    type             = var.acm_certificate_arn != "" ? "redirect" : "forward"
+    target_group_arn = var.acm_certificate_arn != "" ? null : aws_lb_target_group.api.arn
 
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+    dynamic "redirect" {
+      for_each = var.acm_certificate_arn != "" ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
     }
   }
 }
 
-# ── Listener: HTTPS ───────────────────────────────────────
+# ── Listener: HTTPS (인증서 있을 때만 생성) ───────────────
 
 resource "aws_lb_listener" "https" {
+  count = var.acm_certificate_arn != "" ? 1 : 0
+
   load_balancer_arn = aws_lb.main.arn
   port              = 443
   protocol          = "HTTPS"

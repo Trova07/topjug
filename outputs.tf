@@ -39,18 +39,14 @@ output "uploads_bucket_name" {
   value       = module.storage.uploads_bucket_name
 }
 
-# ── DNS ──────────────────────────────────────────────────
-
-output "route53_nameservers" {
-  description = <<-EOT
-    Route53 Hosted Zone의 NS 레코드값 (4개).
-    terraform apply 완료 후 이 값을 도메인 등록업체(가비아, 후이즈 등)의
-    네임서버 항목에 입력해야 ACM 인증서 DNS 검증이 완료됩니다.
-  EOT
-  value       = module.dns.nameservers
-}
-
-output "acm_certificate_arn" {
-  description = "ALB에 연결된 ACM 인증서 ARN"
-  value       = module.dns.acm_certificate_arn
-}
+# ── DNS (도메인 준비 후 주석 해제) ───────────────────────
+#
+# output "route53_nameservers" {
+#   description = "도메인 등록업체에 입력할 NS 레코드값 (4개)"
+#   value       = module.dns.nameservers
+# }
+#
+# output "acm_certificate_arn" {
+#   description = "ALB에 연결된 ACM 인증서 ARN"
+#   value       = module.dns.acm_certificate_arn
+# }

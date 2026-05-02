@@ -16,15 +16,12 @@ resource "aws_ecs_cluster" "main" {
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/ecs/${var.project}/api"
   retention_in_days = 30
-
-  tags = { Name = "${var.project}-api-logs" }
+  # tags 제거 — logs:TagResource 권한 없으면 CreateLogGroup 자체가 실패함
 }
 
 resource "aws_cloudwatch_log_group" "redis" {
   name              = "/ecs/${var.project}/redis"
   retention_in_days = 14
-
-  tags = { Name = "${var.project}-redis-logs" }
 }
 
 # ── IAM: ECS Task Execution Role ─────────────────────────
@@ -272,7 +269,8 @@ resource "aws_ecs_task_definition" "api" {
       name      = "api"
       image     = "${var.ecr_api_url}:latest"
       essential = true
-      memory    = 512 # 컨테이너 레벨 메모리 제한
+      cpu       = var.api_cpu    # variables.tf 에서 주입 (기본값 256)
+      memory    = var.api_memory # variables.tf 에서 주입 (기본값 512 MiB)
 
       portMappings = [{ containerPort = 3000, protocol = "tcp" }]
 
@@ -355,7 +353,7 @@ resource "aws_ecs_service" "api" {
 
 resource "aws_secretsmanager_secret" "db_password" {
   name                    = "${var.project}/db_password"
-  recovery_window_in_days = 7 # 삭제 후 7일간 복구 가능 (0으로 설정 시 즉시 삭제)
+  recovery_window_in_days = 0 # 즉시 삭제 — terraform destroy 후 재apply 시 충돌 방지
 
   tags = { Name = "${var.project}-db-password" }
 }

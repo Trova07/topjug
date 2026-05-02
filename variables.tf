@@ -79,7 +79,7 @@ variable "ec2_instance_type" {
 # ── 도메인 ───────────────────────────────────────────────
 
 variable "domain_name" {
-  description = "Route53 + ACM에 등록할 루트 도메인 (예: topjug.kr)"
+  description = "Route53 + ACM에 등록할 루트 도메인 (예: topjug.kr) — 도메인 준비 전엔 비워둬도 됨"
   type        = string
-  # default 없음 — tfvars에서 반드시 명시
+  default     = ""
 }

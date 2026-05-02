@@ -14,7 +14,7 @@ resource "aws_db_instance" "main" {
   identifier = "${var.project}-postgres"
 
   engine         = "postgres"
-  engine_version = "16.3"
+  engine_version = "16"  # 마이너 버전은 AWS가 최신으로 자동 선택
   instance_class = var.db_instance # 수직확장 시 이 값만 변경
 
   db_name  = var.db_name
@@ -37,11 +37,10 @@ resource "aws_db_instance" "main" {
   skip_final_snapshot       = false
   final_snapshot_identifier = "${var.project}-postgres-final-snapshot"
 
-  deletion_protection = true # 실수로 삭제 방지
+  deletion_protection = false # 개발 단계에서는 비활성화, 운영 시 true로 변경
 
-  # 성능 인사이트 (무료 7일 보존)
-  performance_insights_enabled          = true
-  performance_insights_retention_period = 7
+  # 성능 인사이트 — db.t4g.micro/small 미지원, medium 이상에서만 활성화
+  performance_insights_enabled = false
 
   tags = { Name = "${var.project}-postgres" }
 }

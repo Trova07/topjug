@@ -108,29 +108,7 @@ resource "aws_cloudfront_distribution" "main" {
   tags = { Name = "${var.project}-cloudfront" }
 }
 
-# ── S3 버킷 정책 (CloudFront OAC만 허용) ─────────────────
-# 순환 의존성 방지를 위해 CDN 모듈에서 관리
-
-resource "aws_s3_bucket_policy" "frontend" {
-  bucket = var.s3_bucket_id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowCloudFrontOAC"
-        Effect = "Allow"
-        Principal = {
-          Service = "cloudfront.amazonaws.com"
-        }
-        Action   = "s3:GetObject"
-        Resource = "arn:aws:s3:::${var.s3_bucket_id}/*"
-        Condition = {
-          StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.main.arn
-          }
-        }
-      }
-    ]
-  })
-}
+# ── S3 버킷 정책은 루트 main.tf에서 관리 ─────────────────
+# 이 모듈은 us-east-1 provider를 사용하므로 ap-northeast-2 버킷에
+# 직접 정책을 걸면 307 TemporaryRedirect 발생.
+# 버킷 정책은 루트에서 default provider(ap-northeast-2)로 적용.
