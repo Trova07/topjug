@@ -15,3 +15,9 @@ db_instance_class = "db.t4g.micro"
 api_cpu           = 256
 api_memory        = 512
 api_desired_count = 1
+ec2_instance_type = "t4g.small"  # t4g.medium(4GiB)으로 업그레이드 가능
+
+# ── 도메인 (Route53 + ACM) ────────────────────────────────
+# terraform apply 후 출력되는 route53_nameservers 값을
+# 도메인 등록업체 네임서버에 등록해야 HTTPS 인증서가 활성화됩니다.
+domain_name = "your-domain.com"  # 예: topjug.kr

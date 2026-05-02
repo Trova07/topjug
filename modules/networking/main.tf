@@ -84,19 +84,27 @@ resource "aws_security_group" "alb" {
   tags = { Name = "${var.project}-alb-sg" }
 }
 
-# ECS Task: inbound from VPC only, outbound to all
-# (Public subnet + SG strategy instead of NAT GW)
+# ECS Task: inbound from ALB only + self (inter-task), outbound to all
+# ALB → API(3000) / API → Redis(6379) via CloudMap (self-referencing rule)
 resource "aws_security_group" "ecs" {
   name        = "${var.project}-ecs-sg"
-  description = "ECS Task - inbound from VPC only"
+  description = "ECS Task - inbound from ALB SG and self only"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "Allow all inbound from VPC (ALB to ECS)"
+    description     = "API traffic from ALB only"
+    from_port       = 3000
+    to_port         = 3000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  ingress {
+    description = "Inter-task communication (API to Redis via CloudMap)"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.vpc_cidr]
+    self        = true
   }
 
   egress {

@@ -2,22 +2,22 @@
 
 resource "aws_lb" "main" {
   name               = "${var.project}-alb"
-  internal           = false # 인터넷 facing
+  internal           = false
   load_balancer_type = "application"
   security_groups    = [var.alb_sg_id]
-  subnets            = var.public_subnets # ALB는 2개 AZ 필요
+  subnets            = var.public_subnets
 
   tags = { Name = "${var.project}-alb" }
 }
 
-# ── Target Group (ECS Task 연결) ──────────────────────────
+# ── Target Group ──────────────────────────────────────────
 
 resource "aws_lb_target_group" "api" {
   name        = "${var.project}-api-tg"
-  port        = 3000 # API 서버 포트 (필요 시 변경)
+  port        = 3000
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
-  target_type = "ip" # Fargate는 반드시 ip 타입
+  target_type = "ip"
 
   health_check {
     path                = "/health"
@@ -31,30 +31,35 @@ resource "aws_lb_target_group" "api" {
   tags = { Name = "${var.project}-api-tg" }
 }
 
-# ── Listener ──────────────────────────────────────────────
+# ── Listener: HTTP → HTTPS 리다이렉트 ─────────────────────
 
-# HTTP → 80 포트 리스너 (도메인 연결 후 443 HTTPS 추가 예정)
-resource "aws_lb_listener" "http" {
+resource "aws_lb_listener" "http_redirect" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+# ── Listener: HTTPS ───────────────────────────────────────
+
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.acm_certificate_arn
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.api.arn
   }
 }
-
-# HTTPS 리스너는 도메인 + ACM 인증서 발급 후 아래 주석 해제
-# resource "aws_lb_listener" "https" {
-#   load_balancer_arn = aws_lb.main.arn
-#   port              = 443
-#   protocol          = "HTTPS"
-#   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-#   certificate_arn   = var.acm_certificate_arn
-#
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.api.arn
-#   }
-# }

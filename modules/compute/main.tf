@@ -74,10 +74,12 @@ resource "aws_iam_instance_profile" "ecs_instance" {
   role = aws_iam_role.ecs_instance.name
 }
 
-# ── ECS 최적화 AMI (최신 버전 자동 조회) ──────────────────
+# ── ECS 최적화 AMI — arm64 (t4g 시리즈 전용) ─────────────
+# t4g는 AWS Graviton2(ARM) 아키텍처이므로 arm64 ECS-optimized AMI 필요
+# x86_64 경로: /amazon-linux-2/recommended/image_id
 
 data "aws_ssm_parameter" "ecs_ami" {
-  name = "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
+  name = "/aws/service/ecs/optimized-ami/amazon-linux-2/arm64/recommended/image_id"
 }
 
 # ── Launch Template ───────────────────────────────────────
@@ -286,7 +288,8 @@ resource "aws_ecs_task_definition" "api" {
       ]
 
       secrets = [
-        { name = "DB_PASSWORD", valueFrom = "/topjug/db_password" }
+        # Secrets Manager ARN을 직접 참조 — SSM path 방식보다 권한 범위가 명확
+        { name = "DB_PASSWORD", valueFrom = aws_secretsmanager_secret.db_password.arn }
       ]
 
       logConfiguration = {
@@ -344,26 +347,38 @@ resource "aws_ecs_service" "api" {
   tags = { Name = "${var.project}-api-service" }
 }
 
-# ── SSM Parameter Store (DB 비밀번호) ────────────────────
+# ── AWS Secrets Manager (DB 비밀번호) ────────────────────
+# SSM SecureString 대비 장점:
+#   - 자동 교체(rotation) 스케줄 설정 가능
+#   - IAM 리소스 기반 정책으로 비밀별 세밀한 접근 제어
+#   - ECS Task Definition에서 ARN으로 직접 참조
 
-resource "aws_ssm_parameter" "db_password" {
-  name  = "/topjug/db_password"
-  type  = "SecureString"
-  value = var.db_password
+resource "aws_secretsmanager_secret" "db_password" {
+  name                    = "${var.project}/db_password"
+  recovery_window_in_days = 7 # 삭제 후 7일간 복구 가능 (0으로 설정 시 즉시 삭제)
 
   tags = { Name = "${var.project}-db-password" }
 }
 
-resource "aws_iam_role_policy" "ssm_read" {
-  name = "${var.project}-ssm-read"
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_string = var.db_password
+}
+
+resource "aws_iam_role_policy" "secrets_manager_read" {
+  name = "${var.project}-secrets-manager-read"
   role = aws_iam_role.ecs_task_execution.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["ssm:GetParameters", "ssm:GetParameter"]
-      Resource = "arn:aws:ssm:ap-northeast-2:*:parameter/topjug/*"
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+      ]
+      # 특정 secret ARN만 허용 — 와일드카드(*) 사용 금지
+      Resource = aws_secretsmanager_secret.db_password.arn
     }]
   })
 }

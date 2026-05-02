@@ -57,8 +57,9 @@ variable "api_desired_count" {
 }
 
 variable "ec2_instance_type" {
-  type    = string
-  default = "t3.small"
+  description = "ECS EC2 인스턴스 타입 — t4g(ARM Graviton2) 계열 사용"
+  type        = string
+  default     = "t4g.small" # 2 vCPU / 2 GiB — API 512MB + Redis 256MB 적정
 }
 
 variable "uploads_bucket_arn" {

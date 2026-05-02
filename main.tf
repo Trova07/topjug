@@ -63,10 +63,24 @@ module "ecr" {
 module "loadbalancer" {
   source = "./modules/loadbalancer"
 
-  project        = var.project
-  vpc_id         = module.networking.vpc_id
-  public_subnets = module.networking.public_subnet_ids
-  alb_sg_id      = module.networking.alb_sg_id
+  project             = var.project
+  vpc_id              = module.networking.vpc_id
+  public_subnets      = module.networking.public_subnet_ids
+  alb_sg_id           = module.networking.alb_sg_id
+  acm_certificate_arn = module.dns.acm_certificate_arn
+}
+
+# ── DNS / ACM ─────────────────────────────────────────────
+# loadbalancer 모듈보다 나중에 선언해야 ALB outputs 참조 가능
+# (Terraform은 선언 순서와 무관하게 의존성 그래프로 처리)
+
+module "dns" {
+  source = "./modules/dns"
+
+  project      = var.project
+  domain_name  = var.domain_name
+  alb_dns_name = module.loadbalancer.alb_dns_name
+  alb_zone_id  = module.loadbalancer.alb_zone_id
 }
 
 module "database" {
