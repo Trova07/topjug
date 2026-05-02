@@ -60,3 +60,8 @@ variable "ec2_instance_type" {
   type    = string
   default = "t3.small"
 }
+
+variable "uploads_bucket_arn" {
+  description = "유저 업로드 S3 버킷 ARN (API Task IAM 정책에 사용)"
+  type        = string
+}

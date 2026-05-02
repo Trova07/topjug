@@ -1,0 +1,7 @@
+# GCP 프로젝트 ID (gcloud projects list 로 확인)
+gcp_project = "topjug-test-xxxxxx"
+
+# 필요 시 변경
+# gcp_region   = "asia-northeast3"
+# gcp_zone     = "asia-northeast3-a"
+# machine_type = "e2-small"

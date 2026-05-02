@@ -28,3 +28,50 @@ resource "aws_s3_bucket_versioning" "frontend" {
     status = "Enabled"
   }
 }
+
+# ── 유저 업로드 S3 버킷 ────────────────────────────────────
+# 프로필 사진, 암장 이미지 등 유저 생성 콘텐츠 저장
+# API 서버가 Presigned URL 발급 → 클라이언트가 직접 업로드
+
+resource "aws_s3_bucket" "uploads" {
+  bucket = "${var.project}-uploads-${random_id.suffix.hex}"
+
+  tags = { Name = "${var.project}-uploads" }
+}
+
+resource "aws_s3_bucket_public_access_block" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# CORS: 브라우저에서 Presigned URL로 직접 PUT 업로드 허용
+resource "aws_s3_bucket_cors_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  cors_rule {
+    allowed_methods = ["PUT", "POST", "GET"]
+    allowed_origins = ["*"] # 도메인 확정 후 CloudFront 도메인으로 좁히기
+    allowed_headers = ["*"]
+    max_age_seconds = 3000
+  }
+}
+
+# 업로드 파일 수명 주기 (오래된 파일 자동 정리 — 선택 사항)
+resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+
+  rule {
+    id     = "delete-incomplete-multipart"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+}

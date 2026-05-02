@@ -99,6 +99,7 @@ module "compute" {
   api_memory           = var.api_memory
   api_desired_count    = var.api_desired_count
   ec2_instance_type    = var.ec2_instance_type
+  uploads_bucket_arn   = module.storage.uploads_bucket_arn
 }
 
 module "storage" {

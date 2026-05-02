@@ -33,3 +33,8 @@ output "ecs_cluster_name" {
   description = "ECS 클러스터 이름"
   value       = module.compute.ecs_cluster_name
 }
+
+output "uploads_bucket_name" {
+  description = "유저 업로드 S3 버킷 이름 (프로필 사진, 암장 이미지)"
+  value       = module.storage.uploads_bucket_name
+}

@@ -367,3 +367,24 @@ resource "aws_iam_role_policy" "ssm_read" {
     }]
   })
 }
+
+# ── IAM: API Task → S3 업로드 버킷 접근 ──────────────────
+# Presigned URL 발급 및 파일 관리 권한
+
+resource "aws_iam_role_policy" "s3_uploads" {
+  name = "${var.project}-s3-uploads"
+  role = aws_iam_role.ecs_task_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:PutObject",    # Presigned URL 발급 (업로드)
+        "s3:GetObject",    # 파일 조회
+        "s3:DeleteObject", # 파일 삭제 (프로필 교체 시 기존 파일 정리)
+      ]
+      Resource = "${var.uploads_bucket_arn}/*"
+    }]
+  })
+}
